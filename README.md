@@ -5,14 +5,15 @@
 ---
 
 ## 👥 Team: Free-T
-우리 팀의 구성원을 소개합니다.
+Free-T한 Free-T 팀원들을 소개합니다.
 
 | 성명 | 학과 | 학번 | 역할 |
 | :--- | :--- | :--- | :--- |
-| 홍길동 | 00공학과 | 202612345 | 팀장, AI 모델링 |
-| 김철수 | 00학과 | 202654321 | 데이터 수집 및 전처리 |
-| 이영희 | 00학과 | 202611223 | 알림 시스템 개발 |
-| 박지성 | 00학과 | 202644556 | 문서화 및 기획 |
+| 김현비 | 실내환경디자인학과 | 2025***** | 팀장, AI 모델링 |
+| 김현진 | 화공생명공학과 | 2023***** | 데이터 수집 및 전처리 |
+| 한정진 | 사회기반시스템공학과 | 2023***** | 알림 시스템 개발 |
+| 서원빈 | 정보컴퓨터공학부 | 2022***** | 문서화 및 기획 |
+| 박현 | 사회복지학과 | 2022***** | 문서화 및 기획 |
 
 ---
 
@@ -26,18 +27,32 @@
 2.  **인솔 공백 상황의 위험성**: 전공 레슨 및 이동 중 발생하는 돌발 상황(자해, 쓰러짐 등)에 대한 실시간 개입 필요.
 3.  **행정적 부담 경감 및 범용성**: 기존 CCTV 인프라를 활용하여 예산 제약을 극복하고 전국적으로 확산 가능한 모델 지향.
 
-## 🛠 Key Features
-* **Real-time Vision Analysis**: 학생의 이상 행동(자해, 쓰러짐, 배회 등) 실시간 분석.
-* **Instant Alert System**: 이상 징후 포착 시 담당 교사에게 즉각적인 푸시 알림 전송.
-* **Safety Log & Reporting**: 사고 발생 전후 상황을 자동 기록하여 행정적 대응 근거 마련.
+### 🛠 Key Features
+* **Real-time Vision Analysis**: 비전 AI 기술을 활용하여 학생의 특이 행동(반복적 자해, 쓰러짐 등) 실시간 분석.
+* **Instant Alert System**: 이상 징후 포착 시 담당 교사에게 즉각적인 알림 전송으로 골든타임 확보.
+* **Safety Log & Reporting**: 사고 발생 상황을 자동 기록하여 신뢰할 수 있는 안전 운영 및 보고 체계 제공.
 
-## 📂 Directory Structure
-```text
-├── data/               # 데이터셋 (원본 데이터는 .gitignore 처리)
-├── models/             # 학습된 모델 가중치 및 설정 파일
-├── src/
-│   ├── detection/      # 행동 감지 알고리즘
-│   ├── notification/   # 알림 전송 시스템
-│   └── utils/          # 전처리 및 유틸리티
-├── requirements.txt    # 필요 라이브러리 목록
-└── README.md
+---
+
+<a id="english-version"></a>
+## 🇺🇸 English Version
+
+> A project to develop an AI prototype for action-based anomaly detection, designed to bridge safety gaps at the **National Arts Middle and High Special School affiliated with Pusan National University.**
+
+### 📌 Project Overview
+This project was initiated to **ensure the artistic autonomy of students with developmental disabilities while minimizing safety blind spots**, coinciding with the establishment of Korea's first national arts special school.
+
+Given the geographical challenges of the campus—located on high ground—and the unique nature of arts education requiring many individual practice rooms, we are developing a system that utilizes **Vision AI** to detect abnormal behaviors in real-time and provide immediate alerts to teachers.
+
+### ⚠️ Problem Definition
+1. **Addressing Monitoring Blind Spots**: Resolving the issue of dispersed teacher supervision in individual activity spaces such as instrument practice rooms and art studios.
+2. **Mitigating Risks in Unescorted Situations**: Establishing a real-time detection system for emergency situations (e.g., self-harm, collapsing) that may occur during private lessons or independent transitions.
+3. **Reducing Administrative Burden & Ensuring Universality**: Maximizing scalability for public institutions through a software-centric design that utilizes existing CCTV infrastructure and smartphones.
+
+### 🛠 Key Features
+* **Real-time Vision Analysis**: Real-time analysis of specific student behaviors (e.g., repetitive self-harm, collapsing) using advanced Vision AI technology.
+* **Instant Alert System**: Securing the "Golden Time" by sending immediate notifications to designated teachers upon detection of anomalies.
+* **Safety Log & Reporting**: Providing a reliable safety operation and reporting system by automatically recording incident contexts.
+
+---
+**Last Updated**: 2026-04-24
