@@ -8,28 +8,38 @@ function Students() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: '20px' }}>👤 학생 관리</h1>
-      <div style={{ background: 'white', borderRadius: '16px', padding: '20px', overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
-              {['이름', '반', '나이', '보호자 연락처', '시간표'].map(h => (
-                <th key={h} style={{ padding: '12px', color: '#888' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((s, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                <td style={{ padding: '12px', fontWeight: 'bold' }}>{s.name}</td>
-                <td style={{ padding: '12px' }}>{s.class}</td>
-                <td style={{ padding: '12px' }}>{s.age}세</td>
-                <td style={{ padding: '12px' }}>{s.guardian}</td>
-                <td style={{ padding: '12px' }}>{s.schedule}</td>
+      <div className="ft-page-header">
+        <div>
+          <div className="ft-page-title">👤 학생 관리</div>
+          <div className="ft-page-sub">전체 {students.length}명 모니터링 중</div>
+        </div>
+      </div>
+      <div className="ft-card">
+        <div className="ft-card-header">
+          <div className="ft-card-title"><span>📋</span>학생 명단</div>
+        </div>
+        <div className="ft-card-body" style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--border)', textAlign: 'left' }}>
+                {['이름', '반', '나이', '보호자 연락처', '시간표'].map(h => (
+                  <th key={h} style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 12, fontWeight: 700 }}>{h}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {students.map((s, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                  <td style={{ padding: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{s.name}</td>
+                  <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{s.class}</td>
+                  <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{s.age}세</td>
+                  <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{s.guardian}</td>
+                  <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{s.schedule}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

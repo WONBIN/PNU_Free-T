@@ -8,13 +8,18 @@ function Manual() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: '20px' }}>📖 상황별 행동 매뉴얼</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+      <div className="ft-page-header">
+        <div>
+          <div className="ft-page-title">📖 상황별 행동 매뉴얼</div>
+          <div className="ft-page-sub">행동 유형별 대응 가이드</div>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
         {manuals.map((m, i) => (
-          <div key={i} style={{ background: 'white', borderRadius: '16px', padding: '24px' }}>
-            <div style={{ fontSize: '36px', marginBottom: '10px' }}>{m.icon}</div>
-            <h3 style={{ color: m.color, marginBottom: '10px' }}>{m.type}</h3>
-            <p style={{ color: '#555', lineHeight: '1.6' }}>{m.guide}</p>
+          <div key={i} className="ft-card" style={{ padding: 22 }}>
+            <div style={{ fontSize: 34, marginBottom: 10 }}>{m.icon}</div>
+            <h3 style={{ color: m.color, marginBottom: 10, fontSize: 15 }}>{m.type}</h3>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: 13 }}>{m.guide}</p>
           </div>
         ))}
       </div>
