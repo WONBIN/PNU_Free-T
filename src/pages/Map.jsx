@@ -54,15 +54,22 @@ function Map() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: '16px' }}>📍 위치 및 응급시설 안내</h2>
-      <div
-        ref={mapRef}
-        style={{ width: '100%', height: '500px', borderRadius: '12px', border: '1px solid #ddd' }}
-      />
-      <div style={{ marginTop: '16px', display: 'flex', gap: '20px', fontSize: '14px', color: '#555' }}>
-        <span>🏫 특수학교 건물</span>
-        <span>🚑 응급실</span>
-        <span>🔴 AED 위치</span>
+      <div className="ft-page-header">
+        <div>
+          <div className="ft-page-title">📍 위치 및 응급시설 안내</div>
+          <div className="ft-page-sub">학교 주변 응급실 및 AED 위치를 확인하세요</div>
+        </div>
+      </div>
+      <div className="ft-card" style={{ padding: 14 }}>
+        <div
+          ref={mapRef}
+          style={{ width: '100%', height: '500px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}
+        />
+        <div style={{ marginTop: 14, display: 'flex', gap: 20, fontSize: 13, color: 'var(--text-secondary)' }}>
+          <span>🏫 특수학교 건물</span>
+          <span>🚑 응급실</span>
+          <span>🔴 AED 위치</span>
+        </div>
       </div>
     </div>
   )

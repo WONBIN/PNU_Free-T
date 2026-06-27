@@ -1,51 +1,259 @@
 import { useEffect, useRef, useState } from 'react'
+import { sendPushNotification } from '../utils/notify'
+
+const INITIAL_ALERTS = [
+  { time: '14:32', class: '1반', student: '김민준', behavior: '상동행동(스피닝)', level: 'warning', tag: '경고' },
+  { time: '14:18', class: '2반', student: '이서윤', behavior: '활동 정상 복귀', level: 'normal', tag: '정상' },
+  { time: '13:55', class: '1반', student: '김민준', behavior: '자해행동(헤드뱅잉) 감지', level: 'danger', tag: '긴급' },
+  { time: '13:40', class: '3반', student: '박지호', behavior: '정상 활동 중', level: 'normal', tag: '정상' },
+]
+
+const SIM_EVENTS = [
+  { class: '1반', student: '김민준', behavior: '상동행동(손 흔들기) 감지', level: 'warning', tag: '경고' },
+  { class: '2반', student: '이서윤', behavior: '낙상 위험 감지', level: 'danger', tag: '긴급' },
+  { class: '3반', student: '박지호', behavior: '정상 활동 복귀', level: 'normal', tag: '정상' },
+  { class: '1반', student: '최하은', behavior: '반복 행동 패턴 감지', level: 'warning', tag: '경고' },
+]
+
+const CCTV_CHANNELS = [
+  { id: 'CAM-02', loc: '2반 교실', bg: 'linear-gradient(135deg,#0a1628,#0d2040,#071018)', state: 'normal' },
+  { id: 'CAM-03', loc: '복도 B구역', bg: 'linear-gradient(135deg,#14100a,#201808,#0e0c06)', state: 'warn', label: '⚠ 낙상 위험 감지' },
+  { id: 'CAM-04', loc: '예술 실기실', bg: 'linear-gradient(135deg,#0a1410,#0d2018,#060e0a)', state: 'normal' },
+]
+
+function levelColor(level) {
+  if (level === 'danger') return 'var(--red-600)'
+  if (level === 'warning') return 'var(--orange-500)'
+  return 'var(--green-600)'
+}
 
 function Dashboard() {
   const videoRef = useRef(null)
-  const [alerts] = useState([
-    { time: '14:32', class: '1반', behavior: '상동행동(스피닝)', level: '주의', color: '#f39c12' },
-    { time: '14:18', class: '2반', behavior: '정상', level: '안전', color: '#27ae60' },
-    { time: '13:55', class: '1반', behavior: '자해행동(헤드뱅잉)', level: '위험', color: '#e74c3c' },
-    { time: '13:40', class: '3반', behavior: '정상', level: '안전', color: '#27ae60' },
-  ])
+  const canvasRef = useRef(null)
+  const [alerts, setAlerts] = useState(INITIAL_ALERTS)
+  const [snapshots, setSnapshots] = useState([])
+  const [camReady, setCamReady] = useState(false)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     navigator.mediaDevices?.getUserMedia({ video: true })
-      .then(stream => { if (videoRef.current) videoRef.current.srcObject = stream })
-      .catch(() => console.log('웹캠 접근 불가'))
+      .then(stream => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream
+          setCamReady(true)
+        }
+      })
+      .catch(() => setCamReady(false))
   }, [])
+
+  // 임시 데이터로 "실시간" 느낌을 시뮬레이션 (실제 AI 모델 연동 전까지)
+  useEffect(() => {
+    const id = setInterval(() => {
+      const sim = SIM_EVENTS[Math.floor(Math.random() * SIM_EVENTS.length)]
+      const now = new Date()
+      const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      const newAlert = { ...sim, time }
+      setAlerts((prev) => [newAlert, ...prev].slice(0, 12))
+      sendPushNotification(
+        `${newAlert.tag} — ${newAlert.student}`,
+        `${newAlert.class} · ${newAlert.behavior}`,
+        newAlert.level
+      )
+    }, 25000)
+    return () => clearInterval(id)
+  }, [])
+
+  const showToast = (msg) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2400)
+  }
+
+  const captureSnapshot = () => {
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    if (!video || !canvas || !camReady) {
+      showToast('웹캠이 연결되어 있지 않아 캡처할 수 없습니다.')
+      return
+    }
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 360
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+    const now = new Date()
+    const stamp = now.toLocaleString('ko-KR', { hour12: false })
+    setSnapshots((prev) => [{ url: dataUrl, time: stamp }, ...prev].slice(0, 8))
+    showToast('📸 스냅샷이 캡처되었습니다.')
+  }
+
+  const downloadSnapshot = (url, time) => {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `freet_snapshot_${time.replace(/[^0-9]/g, '')}.jpg`
+    a.click()
+  }
+
+  const dangerCount = alerts.filter(a => a.level === 'danger').length
 
   return (
     <div>
-      <h1 style={{ marginBottom: '20px' }}>📊 대시보드</h1>
+      <div className="ft-page-header">
+        <div>
+          <div className="ft-page-title">📊 실시간 모니터링 대시보드</div>
+          <div className="ft-page-sub">AI 기반 행동 감지 및 긴급 대응 시스템</div>
+        </div>
+        <span className="ft-live-pill">LIVE</span>
+      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px' }}>
-        
-        {/* 웹캠 영상 */}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '20px' }}>
-          <h3 style={{ marginBottom: '10px' }}>🎥 실시간 CCTV</h3>
-          <video ref={videoRef} autoPlay muted
-            style={{ width: '100%', borderRadius: '12px', background: '#000' }} />
+      <div className="ft-stat-row">
+        <div className="ft-stat-card blue">
+          <div className="ft-stat-icon">👥</div>
+          <div className="ft-stat-value">24</div>
+          <div className="ft-stat-label">모니터링 중인 학생</div>
+        </div>
+        <div className="ft-stat-card red">
+          <div className="ft-stat-icon">⚠️</div>
+          <div className="ft-stat-value">{dangerCount}</div>
+          <div className="ft-stat-label">오늘 긴급 알림</div>
+        </div>
+        <div className="ft-stat-card green">
+          <div className="ft-stat-icon">📹</div>
+          <div className="ft-stat-value">{CCTV_CHANNELS.length + 1}</div>
+          <div className="ft-stat-label">활성 CCTV 채널</div>
+        </div>
+        <div className="ft-stat-card orange">
+          <div className="ft-stat-icon">⏱️</div>
+          <div className="ft-stat-value">2.4분</div>
+          <div className="ft-stat-label">평균 대응 시간</div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18, marginBottom: 18 }}>
+        {/* 실시간 CCTV */}
+        <div className="ft-card">
+          <div className="ft-card-header">
+            <div className="ft-card-title"><span>🎥</span>실시간 CCTV 모니터링</div>
+            <span className="ft-live-pill">LIVE</span>
+          </div>
+          <div className="ft-card-body">
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 10 }}>
+              {/* 실제 웹캠 — CAM-01 */}
+              <div className="ft-cctv-card" style={{ gridRow: 'span 1' }}>
+                <video ref={videoRef} autoPlay muted playsInline
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                <div className="ft-cctv-scan" />
+                <div className="ft-cctv-overlay">
+                  <div className="ft-cctv-top">
+                    <div className="ft-rec-badge">REC</div>
+                    <div className="ft-cam-no">CAM-01</div>
+                  </div>
+                  <div className="ft-cctv-loc">1반 교실 (실제 웹캠)</div>
+                </div>
+              </div>
+
+              {CCTV_CHANNELS.map((c) => (
+                <div key={c.id} className={`ft-cctv-card ${c.state === 'warn' ? 'warn' : ''}`}>
+                  <div className="ft-cctv-bg" style={{ background: c.bg }} />
+                  <div className="ft-cctv-scan" style={{ animationDelay: '1s' }} />
+                  <div className="ft-cctv-overlay">
+                    <div className="ft-cctv-top">
+                      <div className="ft-rec-badge">REC</div>
+                      <div className="ft-cam-no">{c.id}</div>
+                    </div>
+                    {c.label && <div className="ft-cctv-alert-label orange">{c.label}</div>}
+                    <div className="ft-cctv-loc">{c.loc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <button className="ft-btn ft-btn-primary" onClick={captureSnapshot}>📸 스냅샷 캡처</button>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>
+                {camReady ? 'CAM-01 웹캠 연결됨' : '웹캠 연결 안 됨 — 권한을 확인하세요'}
+              </span>
+            </div>
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+            {snapshots.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  📁 캡처된 상황 스냅샷 ({snapshots.length})
+                </div>
+                <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+                  {snapshots.map((s, i) => (
+                    <div key={i} style={{ flexShrink: 0, width: 110 }}>
+                      <img
+                        src={s.url}
+                        alt="snapshot"
+                        onClick={() => downloadSnapshot(s.url, s.time)}
+                        style={{ width: 110, height: 64, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer' }}
+                        title="클릭하여 다운로드"
+                      />
+                      <div style={{ fontSize: 9, color: 'var(--text-light)', marginTop: 3 }}>{s.time}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 실시간 알림 피드 */}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '20px' }}>
-          <h3 style={{ marginBottom: '15px' }}>🔔 실시간 알림 피드</h3>
-          {alerts.map((a, i) => (
-            <div key={i} style={{
-              borderLeft: `4px solid ${a.color}`, padding: '10px 14px',
-              marginBottom: '10px', background: '#f9f9f9', borderRadius: '8px'
-            }}>
-              <div style={{ fontSize: '13px', color: '#888' }}>{a.time} · {a.class}</div>
-              <div style={{ fontWeight: 'bold' }}>{a.behavior}</div>
-              <span style={{
-                fontSize: '12px', color: 'white', background: a.color,
-                padding: '2px 8px', borderRadius: '10px'
-              }}>{a.level}</span>
+        <div className="ft-card">
+          <div className="ft-card-header">
+            <div className="ft-card-title"><span>🔔</span>실시간 알림 피드</div>
+            <span className="ft-live-pill">실시간</span>
+          </div>
+          <div className="ft-card-body">
+            <div className="ft-alert-feed">
+              {alerts.map((a, i) => (
+                <div key={i} className={`ft-alert-item ${a.level}`}>
+                  <div className="ft-alert-dot" />
+                  <div className="ft-alert-content">
+                    <div className="ft-alert-msg">{a.student} — {a.behavior}</div>
+                    <div className="ft-alert-meta">
+                      <span className="ft-alert-time">{a.time}</span>
+                      <span className="ft-badge" style={{ background: `${levelColor(a.level)}22`, color: levelColor(a.level) }}>{a.tag}</span>
+                      <span>{a.class}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </div>
+
+      {/* 긴급 대응 퀵패널 */}
+      <div className="ft-emergency-panel">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span style={{ fontSize: 20 }}>🚨</span>
+          <div>
+            <div style={{ fontWeight: 800, color: 'var(--red-700)', fontSize: 15 }}>긴급 대응 센터</div>
+            <div style={{ fontSize: 10.5, color: 'var(--text-muted)' }}>위험 상황 발생 시 즉시 연락하세요</div>
+          </div>
+        </div>
+        <div className="ft-emergency-grid">
+          <a href="tel:119" className="ft-em-btn ft-em-btn-119">🚑 119 긴급 신고</a>
+          <a href="tel:051-000-0000" className="ft-em-btn ft-em-btn-blue">
+            🏥 <div className="ft-em-btn-detail"><span>보건실 연락</span><small>내선 201</small></div>
+          </a>
+          <a href="tel:010-0000-0000" className="ft-em-btn ft-em-btn-green">
+            👩‍🏫 <div className="ft-em-btn-detail"><span>담임 교사</span><small>내선 305</small></div>
+          </a>
+        </div>
+      </div>
+
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, background: 'var(--bg-white)',
+          border: '1px solid var(--border)', borderLeft: '4px solid var(--blue-500)',
+          borderRadius: 10, padding: '12px 18px', boxShadow: 'var(--shadow-md)', fontSize: 12.5, zIndex: 3000,
+        }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

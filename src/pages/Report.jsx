@@ -14,35 +14,47 @@ function Report() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: '20px' }}>📋 이상행동 리포트</h1>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        
-        {/* 기록 리스트 */}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '20px' }}>
-          <h3 style={{ marginBottom: '15px' }}>최근 기록</h3>
-          {logs.map((l, i) => (
-            <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
-              <div style={{ fontSize: '13px', color: '#888' }}>{l.date} {l.time}</div>
-              <div><b>{l.student}</b> · {l.behavior} · {l.duration}</div>
-            </div>
-          ))}
+      <div className="ft-page-header">
+        <div>
+          <div className="ft-page-title">📋 이상행동 리포트</div>
+          <div className="ft-page-sub">최근 감지 기록 및 주간 통계</div>
         </div>
+      </div>
 
-        {/* 주간 통계 */}
-        <div style={{ background: 'white', borderRadius: '16px', padding: '20px' }}>
-          <h3 style={{ marginBottom: '15px' }}>주간 발생 통계</h3>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '12px', height: '160px' }}>
-            {weeklyStats.map((d, i) => (
-              <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{
-                  height: `${(d.count / max) * 120}px`, background: '#e94560',
-                  borderRadius: '6px 6px 0 0', marginBottom: '6px'
-                }} />
-                <div style={{ fontSize: '13px' }}>{d.day}</div>
-                <div style={{ fontSize: '12px', color: '#888' }}>{d.count}회</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+
+        <div className="ft-card">
+          <div className="ft-card-header">
+            <div className="ft-card-title"><span>🕒</span>최근 기록</div>
+          </div>
+          <div className="ft-card-body" style={{ paddingTop: 6 }}>
+            {logs.map((l, i) => (
+              <div key={i} style={{ padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.date} {l.time}</div>
+                <div style={{ fontSize: 13 }}><b style={{ color: 'var(--text-primary)' }}>{l.student}</b> · {l.behavior} · {l.duration}</div>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div className="ft-card">
+          <div className="ft-card-header">
+            <div className="ft-card-title"><span>📊</span>주간 발생 통계</div>
+          </div>
+          <div className="ft-card-body">
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 160 }}>
+              {weeklyStats.map((d, i) => (
+                <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{
+                    height: `${(d.count / max) * 120}px`,
+                    background: 'linear-gradient(180deg, var(--blue-500), var(--blue-700))',
+                    borderRadius: '6px 6px 0 0', marginBottom: 6,
+                  }} />
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{d.day}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{d.count}회</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
