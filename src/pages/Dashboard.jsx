@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { sendPushNotification } from '../utils/notify'
+import {
+  loadBehaviorModel, getDetector, extractLandmarks, classifyWindow,
+  LandmarkWindowBuffer, BehaviorStateTracker, labelToAlert,
+  SAMPLE_INTERVAL_MS, MODEL_DISCLOSURE,
+} from '../utils/behaviorAI'
 
 const INITIAL_ALERTS = [
   { time: '14:32', class: '1반', student: '김민준', behavior: '상동행동(스피닝)', level: 'warning', tag: '경고' },
@@ -34,6 +39,8 @@ function Dashboard() {
   const [snapshots, setSnapshots] = useState([])
   const [camReady, setCamReady] = useState(false)
   const [toast, setToast] = useState(null)
+  const [aiStatus, setAiStatus] = useState('idle') // idle | loading | ready | error
+  const [aiLive, setAiLive] = useState(null) // { label, confidence, motion }
 
   useEffect(() => {
     navigator.mediaDevices?.getUserMedia({ video: true })
@@ -45,6 +52,68 @@ function Dashboard() {
       })
       .catch(() => setCamReady(false))
   }, [])
+
+  // CAM-01(실제 웹캠)에 대한 실시간 AI 행동 감지: MoveNet 포즈 추출 -> 20프레임 윈도우
+  // -> 37차원 특징(속도/반복성/주기성) -> 경량 분류기(TFJS) 추론 -> 상태 안정화 후 알림 발생
+  useEffect(() => {
+    if (!camReady) return
+    let cancelled = false
+    let intervalId = null
+    const buffer = new LandmarkWindowBuffer()
+    const tracker = new BehaviorStateTracker()
+
+    setAiStatus('loading')
+
+    Promise.all([loadBehaviorModel(), getDetector()])
+      .then(([{ model, meta }, detector]) => {
+        if (cancelled) return
+        setAiStatus('ready')
+
+        intervalId = setInterval(async () => {
+          const video = videoRef.current
+          if (!video || video.readyState < 2) return
+          try {
+            const poses = await detector.estimatePoses(video)
+            const vw = video.videoWidth
+            const vh = video.videoHeight
+            const kps = poses.length > 0 ? poses[0].keypoints : []
+            buffer.push(extractLandmarks(kps, vw, vh))
+
+            if (!buffer.isFull()) return
+            const result = await classifyWindow(model, meta, buffer.toArray())
+            setAiLive(result)
+
+            const fired = tracker.update(result.label)
+            if (fired) {
+              const info = labelToAlert(fired)
+              const now = new Date()
+              const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+              const newAlert = {
+                time, class: '1반', student: '실시간 웹캠(CAM-01)',
+                behavior: info.behavior, level: info.level, tag: info.tag,
+              }
+              setAlerts((prev) => [newAlert, ...prev].slice(0, 12))
+              sendPushNotification(
+                `${newAlert.tag} — AI 실시간 감지`,
+                `CAM-01 · ${info.behavior}`,
+                newAlert.level
+              )
+            }
+          } catch (e) {
+            console.warn('AI 추론 오류', e)
+          }
+        }, SAMPLE_INTERVAL_MS)
+      })
+      .catch((e) => {
+        console.warn('AI 모델 로딩 실패', e)
+        if (!cancelled) setAiStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [camReady])
 
   // 임시 데이터로 "실시간" 느낌을 시뮬레이션 (실제 AI 모델 연동 전까지)
   useEffect(() => {
@@ -167,12 +236,41 @@ function Dashboard() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap', alignItems: 'center' }}>
               <button className="ft-btn ft-btn-primary" onClick={captureSnapshot}>📸 스냅샷 캡처</button>
               <span style={{ fontSize: 11, color: 'var(--text-muted)', alignSelf: 'center' }}>
                 {camReady ? 'CAM-01 웹캠 연결됨' : '웹캠 연결 안 됨 — 권한을 확인하세요'}
               </span>
+              {camReady && (
+                <span style={{
+                  fontSize: 11, fontWeight: 700, alignSelf: 'center', padding: '3px 8px', borderRadius: 6,
+                  background: aiStatus === 'ready' ? 'var(--green-600)22' : aiStatus === 'error' ? 'var(--red-600)22' : 'var(--orange-500)22',
+                  color: aiStatus === 'ready' ? 'var(--green-600)' : aiStatus === 'error' ? 'var(--red-600)' : 'var(--orange-500)',
+                }}>
+                  {aiStatus === 'loading' && '🤖 AI 모델 로딩 중…'}
+                  {aiStatus === 'ready' && '🤖 AI 실시간 분석 중'}
+                  {aiStatus === 'error' && '🤖 AI 모델 로드 실패'}
+                </span>
+              )}
             </div>
+
+            {camReady && aiStatus === 'ready' && (
+              <div style={{
+                marginTop: 8, fontSize: 11, color: 'var(--text-muted)', display: 'flex',
+                gap: 10, flexWrap: 'wrap', alignItems: 'center',
+              }}>
+                <span>
+                  현재 판단: <b style={{ color: 'var(--text-primary)' }}>
+                    {aiLive ? (aiLive.label === 'NORMAL' ? '정상' : aiLive.label) : '윈도우 수집 중…'}
+                  </b>
+                  {aiLive && ` (확신도 ${(aiLive.confidence * 100).toFixed(0)}%)`}
+                </span>
+                <span style={{ color: 'var(--text-light)' }}>
+                  ※ SSBD 데이터셋 기반 경량 프로토타입 — 5-fold 교차검증 정확도 약 {Math.round(MODEL_DISCLOSURE.cvMeanAcc * 100)}%
+                  (우연 정확도 {Math.round(MODEL_DISCLOSURE.chanceAcc * 100)}%), 보조 참고용으로만 사용하세요.
+                </span>
+              </div>
+            )}
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
             {snapshots.length > 0 && (
