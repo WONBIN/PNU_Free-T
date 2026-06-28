@@ -297,4 +297,52 @@ export async function classifyWindow(model, meta, frames) {
   return { label: meta.classes[maxIdx], confidence: probs[maxIdx], probs: Array.from(probs), motion }
 }
 
-// 디바운스/쿨다운까지 포함한 상태 
+// 디바운스/쿨다운까지 포함한 상태 트래커
+export class BehaviorStateTracker {
+  constructor() {
+    this.pendingLabel = null
+    this.pendingCount = 0
+    this.lastFiredLabel = null
+    this.lastFiredAt = 0
+  }
+
+  // 매 윈도우 분류 결과를 넣으면, 알림을 "새로" 발생시켜야 할 때만 라벨을 반환(아니면 null)
+  update(label) {
+    if (label === this.pendingLabel) {
+      this.pendingCount += 1
+    } else {
+      this.pendingLabel = label
+      this.pendingCount = 1
+    }
+
+    if (this.pendingCount < STABLE_WINDOWS_REQUIRED) return null
+    if (label === 'NORMAL') {
+      // 정상으로 안정적으로 돌아온 경우, 이전 상태 초기화(다음 이상행동은 새로 알림 가능)
+      const changed = this.lastFiredLabel !== null && this.lastFiredLabel !== 'NORMAL'
+      this.lastFiredLabel = 'NORMAL'
+      return changed ? 'NORMAL' : null
+    }
+
+    const now = Date.now()
+    const sameAsLast = label === this.lastFiredLabel
+    if (sameAsLast && now - this.lastFiredAt < COOLDOWN_MS) return null
+
+    this.lastFiredLabel = label
+    this.lastFiredAt = now
+    return label
+  }
+}
+
+export function labelToAlert(label) {
+  switch (label) {
+    case 'ArmFlapping':
+      return { behavior: '상동행동(손 흔들기) 감지 — AI 분석', level: 'warning', tag: '경고' }
+    case 'HeadBanging':
+      return { behavior: '자해행동(헤드뱅잉) 감지 — AI 분석', level: 'danger', tag: '긴급' }
+    case 'Spinning':
+      return { behavior: '상동행동(스피닝) 감지 — AI 분석', level: 'warning', tag: '경고' }
+    case 'NORMAL':
+    default:
+      return { behavior: '정상 활동 복귀 — AI 분석', level: 'normal', tag: '정상' }
+  }
+}
