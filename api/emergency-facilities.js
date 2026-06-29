@@ -62,16 +62,19 @@ export default async function handler(req, res) {
   }
 
   const stage1 = req.query.stage1 || '부산광역시'
-  const stage2 = req.query.stage2 || '금정구'
-  const numOfRows = req.query.numOfRows || '50'
+  // 시군구(Q1)는 일부러 기본값을 비워둔다 — 자치구 단위로 좁히면 그 구에 등록된
+  // 응급의료기관이 0건일 수 있어(예: 금정구) "empty"로 빠지기 쉬움.
+  // 시/도 단위로 넓게 받아온 뒤 클라이언트에서 Haversine 거리로 가까운 곳만 추려낸다.
+  const stage2 = req.query.stage2 || ''
+  const numOfRows = req.query.numOfRows || '100'
 
   const qs = new URLSearchParams({
     serviceKey,
     Q0: stage1,
-    Q1: stage2,
     pageNo: '1',
     numOfRows: String(numOfRows),
   })
+  if (stage2) qs.set('Q1', stage2)
 
   try {
     const upstream = await fetch(`${SERVICE_URL}?${qs.toString()}`)
@@ -97,8 +100,17 @@ export default async function handler(req, res) {
       }))
       .filter((f) => f.name && Number.isFinite(f.lat) && Number.isFinite(f.lng))
 
+    // 진단용: 결과가 비어 보일 때 원인이 "API가 0건 반환"인지 "파싱/필터에서 걸러짐"인지 구분하기 위함
+    const totalCount = getTag(xml, 'totalCount')
+
     res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=86400')
-    res.status(200).json({ facilities, source: '공공데이터포털 국립중앙의료원 응급의료기관 정보', stage1, stage2 })
+    res.status(200).json({
+      facilities,
+      source: '공공데이터포털 국립중앙의료원 응급의료기관 정보',
+      stage1,
+      stage2,
+      debug: { totalCount, rawItemCount: items.length, filteredCount: facilities.length },
+    })
   } catch (e) {
     res.status(500).json({ error: `요청 실패: ${e.message}` })
   }

@@ -81,7 +81,9 @@ function Map() {
 
   // 2) 공공데이터포털 응급의료기관 정보 가져오기 (지도 SDK와 독립적으로 동작)
   useEffect(() => {
-    const params = new URLSearchParams({ stage1: SCHOOL_STAGE1, stage2: SCHOOL_STAGE2 })
+    // 자치구(stage2)로 좁히면 그 구에 등록된 응급의료기관이 0건일 수 있어(예: 금정구)
+    // 시/도 단위로만 넓게 요청하고, 가까운 곳은 클라이언트에서 거리 계산으로 추려낸다.
+    const params = new URLSearchParams({ stage1: SCHOOL_STAGE1 })
     fetch(`/api/emergency-facilities?${params.toString()}`)
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)
