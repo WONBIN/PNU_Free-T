@@ -37,7 +37,7 @@ function Report() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+      <div className="ft-grid-half">
 
         <div className="ft-card">
           <div className="ft-card-header">

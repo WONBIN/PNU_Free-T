@@ -265,7 +265,7 @@ function Manual() {
 
       <GoldenTimer />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 18, marginBottom: 18 }}>
+      <div className="ft-grid-main">
         <div className="ft-card">
           <div className="ft-card-header">
             <div className="ft-card-title"><span>📞</span>빠른 연락</div>
@@ -303,7 +303,7 @@ function Manual() {
       <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', margin: '4px 2px 10px' }}>
         행동 유형별 단계별 절차 (카드를 눌러 펼치고, 진행한 단계를 체크하세요)
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+      <div className="ft-grid-half" style={{ gap: 16 }}>
         {MANUALS.map((m) => (
           <ManualCard
             key={m.id}

@@ -15,7 +15,7 @@ function Emergency() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+      <div className="ft-grid-half">
         {CONTACTS.map((c) => (
           <a key={c.title} href={c.href} style={{ textDecoration: 'none' }}>
             <div style={{

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { sendPushNotification } from '../utils/notify'
 import { setActiveEmergency } from '../utils/emergencyAlert'
 import { STUDENTS, randomStudent } from '../data/students'
+import Avatar from '../components/Avatar'
 import {
   loadBehaviorModel, getDetector, extractLandmarks, classifyWindow,
   LandmarkWindowBuffer, BehaviorStateTracker, labelToAlert,
@@ -21,10 +22,18 @@ const BEHAVIOR_POOL = [
   { behavior: '정상 활동 복귀', level: 'normal', tag: '정상' },
 ]
 
+// 알림마다 고유 id를 부여 — "확인 처리" 버튼이 배열 재정렬/슬라이스와 무관하게
+// 정확히 그 알림을 추적할 수 있도록 함 (배열 인덱스 i는 새 알림이 앞에 쌓이면서 계속 바뀌므로 부적합)
+let alertIdSeq = 0
+function newAlertId() {
+  alertIdSeq += 1
+  return alertIdSeq
+}
+
 function buildAlert(time) {
   const template = BEHAVIOR_POOL[Math.floor(Math.random() * BEHAVIOR_POOL.length)]
   const student = randomStudent()
-  return { time, class: student.class, student: student.name, ...template }
+  return { id: newAlertId(), time, class: student.class, student: student.name, acked: false, ...template }
 }
 
 // 페이지가 로드될 때 한 번만 생성되는 "이전 기록" — 실제 학생 명단에서 무작위로 구성
@@ -99,8 +108,8 @@ function Dashboard() {
               const now = new Date()
               const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
               const newAlert = {
-                time, class: '1반', student: '실시간 웹캠(CAM-01)',
-                behavior: info.behavior, level: info.level, tag: info.tag,
+                id: newAlertId(), time, class: '1반', student: '실시간 웹캠(CAM-01)',
+                behavior: info.behavior, level: info.level, tag: info.tag, acked: false,
               }
               setAlerts((prev) => [newAlert, ...prev].slice(0, 12))
               sendPushNotification(
@@ -188,6 +197,11 @@ function Dashboard() {
 
   const dangerCount = alerts.filter(a => a.level === 'danger').length
 
+  // 알림 "확인 처리" — 쌓이기만 하던 알림 피드에 처리 여부를 남길 수 있게 함
+  const toggleAck = (id) => {
+    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, acked: !a.acked } : a)))
+  }
+
   return (
     <div>
       <div className="ft-page-header">
@@ -221,7 +235,7 @@ function Dashboard() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 18, marginBottom: 18 }}>
+      <div className="ft-grid-main">
         {/* 실시간 CCTV */}
         <div className="ft-card">
           <div className="ft-card-header">
@@ -229,7 +243,7 @@ function Dashboard() {
             <span className="ft-live-pill">LIVE</span>
           </div>
           <div className="ft-card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 10 }}>
+            <div className="ft-dashboard-cam-grid">
               {/* 실제 웹캠 — CAM-01 */}
               <div className="ft-cctv-card" style={{ gridRow: 'span 1' }}>
                 <video ref={videoRef} autoPlay muted playsInline
@@ -329,9 +343,9 @@ function Dashboard() {
           </div>
           <div className="ft-card-body">
             <div className="ft-alert-feed">
-              {alerts.map((a, i) => (
-                <div key={i} className={`ft-alert-item ${a.level}`}>
-                  <div className="ft-alert-dot" />
+              {alerts.map((a) => (
+                <div key={a.id} className={`ft-alert-item ${a.level}`} style={{ opacity: a.acked ? 0.5 : 1 }}>
+                  <Avatar name={a.student} size={28} />
                   <div className="ft-alert-content">
                     <div className="ft-alert-msg">{a.student} — {a.behavior}</div>
                     <div className="ft-alert-meta">
@@ -340,6 +354,19 @@ function Dashboard() {
                       <span>{a.class}</span>
                     </div>
                   </div>
+                  {a.acked ? (
+                    <span className="ft-badge" style={{ background: 'var(--border-light)', color: 'var(--text-muted)', flexShrink: 0 }}>
+                      ✔ 처리됨
+                    </span>
+                  ) : (
+                    <button
+                      className="ft-btn ft-btn-outline"
+                      style={{ flexShrink: 0, padding: '4px 10px', fontSize: 11.5 }}
+                      onClick={() => toggleAck(a.id)}
+                    >
+                      확인
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

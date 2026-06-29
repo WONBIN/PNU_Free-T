@@ -327,6 +327,13 @@ body { background: var(--bg-base); color: var(--text-primary); font-family: 'Not
 
 .ft-main { flex: 1; padding: 26px 28px 40px; background: var(--bg-base); overflow-y: auto; }
 
+/* ---------------- 재사용 가능한 2단 콘텐츠 그리드 ---------------- */
+/* 대시보드(CCTV+알림), 리포트, 긴급연락 등에서 쓰는 2단 레이아웃을
+   인라인 style 대신 클래스로 빼서, 아래 모바일 미디어쿼리에서 한 번에 1단으로 바꿀 수 있게 함 */
+.ft-grid-main { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; margin-bottom: 18px; }
+.ft-grid-half { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.ft-dashboard-cam-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px; }
+
 /* ---------------- Banner ---------------- */
 .ft-banner {
   background: linear-gradient(135deg, var(--blue-900) 0%, var(--blue-800) 60%, var(--blue-700) 100%);
@@ -367,4 +374,32 @@ body { background: var(--bg-base); color: var(--text-primary); font-family: 'Not
 @media (max-width: 900px) {
   .ft-stat-row { grid-template-columns: repeat(2, 1fr); }
   .ft-cctv-grid { grid-template-columns: repeat(2, 1fr); }
+  .ft-grid-main, .ft-grid-half { grid-template-columns: 1fr; }
+  .ft-dashboard-cam-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ---------------- 모바일: 좌측 고정 사이드바(230px) -> 상단 가로 스크롤 바 ---------------- */
+/* 교사가 응급상황 중 휴대폰으로 매뉴얼/긴급연락 페이지를 볼 가능성이 높은데,
+   기존엔 사이드바 너비가 고정이라 좁은 화면에서 본문이 거의 안 보이는 문제가 있었음 */
+@media (max-width: 640px) {
+  .ft-shell { flex-direction: column; min-height: auto; }
+  .ft-sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .ft-sidebar-logo { border-bottom: none; border-right: 1px solid var(--border); flex-shrink: 0; }
+  .ft-nav-section { display: flex; align-items: center; gap: 4px; padding: 8px; overflow-x: auto; }
+  .ft-nav-label { display: none; }
+  .ft-nav-item { white-space: nowrap; margin-bottom: 0; }
+  .ft-nav-item.active { border-left: none; border-bottom: 3px solid var(--blue-600); }
+  .ft-nav-badge { margin-left: 6px; }
+  .ft-sidebar-bottom { margin-top: 0; padding: 8px 12px; border-top: none; border-left: 1px solid var(--border); flex-shrink: 0; display: flex; align-items: center; }
+  .ft-logout-btn { width: auto; white-space: nowrap; padding: 9px 14px; }
+  .ft-main { padding: 16px 14px 30px; }
+  .ft-page-header { flex-wrap: wrap; gap: 8px; }
+  .ft-dashboard-cam-grid { grid-template-columns: 1fr; }
 }

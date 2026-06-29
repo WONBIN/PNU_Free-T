@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { STUDENTS, CLASSES } from '../data/students'
+import Avatar from '../components/Avatar'
 
 function Students() {
   const [classFilter, setClassFilter] = useState('전체')
@@ -55,7 +56,12 @@ function Students() {
               {filtered.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
                   <td style={{ padding: '12px', color: 'var(--text-muted)', fontSize: 12 }}>{s.id}</td>
-                  <td style={{ padding: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{s.name}</td>
+                  <td style={{ padding: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Avatar name={s.name} size={26} />
+                      {s.name}
+                    </div>
+                  </td>
                   <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{s.class}</td>
                   <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{s.age}세</td>
                   <td style={{ padding: '12px' }}>
