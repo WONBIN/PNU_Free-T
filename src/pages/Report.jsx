@@ -1,10 +1,26 @@
+import { useState } from 'react'
+import { randomStudent } from '../data/students'
+
+const BEHAVIOR_LABELS = ['상동행동', '자해행동', '공격성행동', '낙상 위험']
+const DURATIONS = ['6초', '8초', '10초', '12초', '15초', '20초']
+
+function buildLog(date, time) {
+  const student = randomStudent()
+  const behavior = BEHAVIOR_LABELS[Math.floor(Math.random() * BEHAVIOR_LABELS.length)]
+  const duration = DURATIONS[Math.floor(Math.random() * DURATIONS.length)]
+  return { date, time, student: student.name, class: student.class, behavior, duration }
+}
+
 function Report() {
-  const logs = [
-    { date: '6/24', time: '14:32', student: '김민준', behavior: '상동행동', duration: '12초' },
-    { date: '6/24', time: '13:55', student: '이서윤', behavior: '자해행동', duration: '8초' },
-    { date: '6/23', time: '11:20', student: '김민준', behavior: '상동행동', duration: '15초' },
-    { date: '6/22', time: '10:05', student: '박지호', behavior: '공격성행동', duration: '20초' },
-  ]
+  // useState 초기값으로 한 번만 생성 — 매 렌더마다 다시 무작위로 뽑히지 않도록 고정
+  const [logs] = useState(() => [
+    buildLog('6/24', '14:32'),
+    buildLog('6/24', '13:55'),
+    buildLog('6/23', '11:20'),
+    buildLog('6/22', '10:05'),
+    buildLog('6/22', '09:40'),
+    buildLog('6/21', '15:10'),
+  ])
 
   const weeklyStats = [
     { day: '월', count: 2 }, { day: '화', count: 4 }, { day: '수', count: 1 },
@@ -30,7 +46,7 @@ function Report() {
           <div className="ft-card-body" style={{ paddingTop: 6 }}>
             {logs.map((l, i) => (
               <div key={i} style={{ padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid var(--border-light)' : 'none' }}>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.date} {l.time}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{l.date} {l.time} · {l.class}</div>
                 <div style={{ fontSize: 13 }}><b style={{ color: 'var(--text-primary)' }}>{l.student}</b> · {l.behavior} · {l.duration}</div>
               </div>
             ))}

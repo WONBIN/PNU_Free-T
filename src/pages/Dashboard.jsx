@@ -1,24 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import { sendPushNotification } from '../utils/notify'
+import { setActiveEmergency } from '../utils/emergencyAlert'
+import { STUDENTS, randomStudent } from '../data/students'
 import {
   loadBehaviorModel, getDetector, extractLandmarks, classifyWindow,
   LandmarkWindowBuffer, BehaviorStateTracker, labelToAlert,
   SAMPLE_INTERVAL_MS, MODEL_DISCLOSURE,
 } from '../utils/behaviorAI'
 
-const INITIAL_ALERTS = [
-  { time: '14:32', class: '1반', student: '김민준', behavior: '상동행동(스피닝)', level: 'warning', tag: '경고' },
-  { time: '14:18', class: '2반', student: '이서윤', behavior: '활동 정상 복귀', level: 'normal', tag: '정상' },
-  { time: '13:55', class: '1반', student: '김민준', behavior: '자해행동(헤드뱅잉) 감지', level: 'danger', tag: '긴급' },
-  { time: '13:40', class: '3반', student: '박지호', behavior: '정상 활동 중', level: 'normal', tag: '정상' },
+// 행동 유형 풀 — 실제 학생(STUDENTS)을 무작위로 골라 조합해 알림을 만든다.
+// (예전에는 학생 4명의 이름이 항상 똑같이 반복돼서 데모가 비현실적으로 보였음)
+const BEHAVIOR_POOL = [
+  { behavior: '상동행동(손 흔들기) 감지', level: 'warning', tag: '경고' },
+  { behavior: '상동행동(스피닝) 감지', level: 'warning', tag: '경고' },
+  { behavior: '반복 행동 패턴 감지', level: 'warning', tag: '경고' },
+  { behavior: '자해행동(헤드뱅잉) 감지', level: 'danger', tag: '긴급' },
+  { behavior: '낙상 위험 감지', level: 'danger', tag: '긴급' },
+  { behavior: '공격성행동 감지', level: 'danger', tag: '긴급' },
+  { behavior: '정상 활동 중', level: 'normal', tag: '정상' },
+  { behavior: '정상 활동 복귀', level: 'normal', tag: '정상' },
 ]
 
-const SIM_EVENTS = [
-  { class: '1반', student: '김민준', behavior: '상동행동(손 흔들기) 감지', level: 'warning', tag: '경고' },
-  { class: '2반', student: '이서윤', behavior: '낙상 위험 감지', level: 'danger', tag: '긴급' },
-  { class: '3반', student: '박지호', behavior: '정상 활동 복귀', level: 'normal', tag: '정상' },
-  { class: '1반', student: '최하은', behavior: '반복 행동 패턴 감지', level: 'warning', tag: '경고' },
-]
+function buildAlert(time) {
+  const template = BEHAVIOR_POOL[Math.floor(Math.random() * BEHAVIOR_POOL.length)]
+  const student = randomStudent()
+  return { time, class: student.class, student: student.name, ...template }
+}
+
+// 페이지가 로드될 때 한 번만 생성되는 "이전 기록" — 실제 학생 명단에서 무작위로 구성
+const INITIAL_ALERTS = ['14:32', '14:18', '13:55', '13:40'].map((t) => buildAlert(t))
 
 const CCTV_CHANNELS = [
   { id: 'CAM-02', loc: '2반 교실', bg: 'linear-gradient(135deg,#0a1628,#0d2040,#071018)', state: 'normal' },
@@ -98,6 +108,14 @@ function Dashboard() {
                 `CAM-01 · ${info.behavior}`,
                 newAlert.level
               )
+              // 실제 웹캠 AI가 "긴급" 등급을 감지하면, 매뉴얼 페이지의 골든타임 타이머가
+              // 수동 클릭 없이도 이 시점부터 자동으로 시작되도록 신호를 남긴다.
+              if (newAlert.level === 'danger') {
+                setActiveEmergency({
+                  student: newAlert.student, class: newAlert.class,
+                  behavior: newAlert.behavior, time: newAlert.time,
+                })
+              }
             }
           } catch (e) {
             console.warn('AI 추론 오류', e)
@@ -115,19 +133,25 @@ function Dashboard() {
     }
   }, [camReady])
 
-  // 임시 데이터로 "실시간" 느낌을 시뮬레이션 (실제 AI 모델 연동 전까지)
+  // 임시 데이터로 "실시간" 느낌을 시뮬레이션 (실제 AI 모델 연동 전까지) — 전체 학생 명단에서 무작위로 선택
   useEffect(() => {
     const id = setInterval(() => {
-      const sim = SIM_EVENTS[Math.floor(Math.random() * SIM_EVENTS.length)]
       const now = new Date()
       const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-      const newAlert = { ...sim, time }
+      const newAlert = buildAlert(time)
       setAlerts((prev) => [newAlert, ...prev].slice(0, 12))
       sendPushNotification(
         `${newAlert.tag} — ${newAlert.student}`,
         `${newAlert.class} · ${newAlert.behavior}`,
         newAlert.level
       )
+      // 시뮬레이션이라도 "긴급" 등급이면 매뉴얼 페이지 타이머 자동 시작 신호를 동일하게 남긴다.
+      if (newAlert.level === 'danger') {
+        setActiveEmergency({
+          student: newAlert.student, class: newAlert.class,
+          behavior: newAlert.behavior, time: newAlert.time,
+        })
+      }
     }, 25000)
     return () => clearInterval(id)
   }, [])
@@ -177,7 +201,7 @@ function Dashboard() {
       <div className="ft-stat-row">
         <div className="ft-stat-card blue">
           <div className="ft-stat-icon">👥</div>
-          <div className="ft-stat-value">24</div>
+          <div className="ft-stat-value">{STUDENTS.length}</div>
           <div className="ft-stat-label">모니터링 중인 학생</div>
         </div>
         <div className="ft-stat-card red">

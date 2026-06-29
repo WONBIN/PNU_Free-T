@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { getActiveEmergency, clearActiveEmergency } from '../utils/emergencyAlert'
 
 // 캠퍼스가 고지대/외곽에 위치해 119 도착까지 시간이 걸리는 점을 고려해
 // "구급대 도착 전까지 현장에서 바로 할 수 있는 행동"을 단계별로 명시한다.
@@ -106,7 +107,9 @@ function GoldenTimer() {
   const [seconds, setSeconds] = useState(0)
   const [running, setRunning] = useState(false)
   const [lastResult, setLastResult] = useState(null)
+  const [autoInfo, setAutoInfo] = useState(null) // 대시보드 AI/시뮬레이션이 감지한 "긴급" 알림으로 자동 시작된 경우 그 정보
   const intervalRef = useRef(null)
+  const pollRef = useRef(null)
 
   useEffect(() => {
     if (running) {
@@ -117,14 +120,38 @@ function GoldenTimer() {
     return () => clearInterval(intervalRef.current)
   }, [running])
 
+  // 실제 구급 상황 중에는 "타이머 시작" 버튼을 챙겨서 누르고 있을 여유가 없다는 피드백을 반영해,
+  // 대시보드에서 이미 "긴급" 등급 알림(AI 실시간 감지 또는 시뮬레이션)이 발생해 있다면
+  // 그 발생 시각을 기준으로 자동으로 타이머를 시작한다. 버튼은 AI가 놓친 상황을 위한 수동 보조 수단으로 남긴다.
+  useEffect(() => {
+    const checkAutoStart = () => {
+      setRunning((isRunning) => {
+        if (isRunning) return isRunning
+        const active = getActiveEmergency()
+        if (!active) return isRunning
+        const elapsed = Math.floor((Date.now() - active.startedAt) / 1000)
+        setSeconds(elapsed)
+        setAutoInfo(active)
+        setLastResult(null)
+        return true
+      })
+    }
+    checkAutoStart()
+    pollRef.current = setInterval(checkAutoStart, 2000)
+    return () => clearInterval(pollRef.current)
+  }, [])
+
   const start = () => {
     setSeconds(0)
     setLastResult(null)
+    setAutoInfo(null)
     setRunning(true)
   }
   const stop = () => {
     setRunning(false)
     setLastResult(formatTime(seconds))
+    setAutoInfo(null)
+    clearActiveEmergency()
   }
 
   const tc = timerColor(seconds)
@@ -133,7 +160,11 @@ function GoldenTimer() {
     <div className="ft-card" style={{ marginBottom: 18, borderColor: running ? tc.fg : undefined }}>
       <div className="ft-card-header">
         <div className="ft-card-title"><span>⏱️</span>골든타임 타이머</div>
-        {running && <span className="ft-live-pill" style={{ background: `${tc.fg}1a`, color: tc.fg }}>대응 중</span>}
+        {running && (
+          <span className="ft-live-pill" style={{ background: `${tc.fg}1a`, color: tc.fg }}>
+            {autoInfo ? '🤖 AI 감지로 자동 시작' : '대응 중'}
+          </span>
+        )}
       </div>
       <div className="ft-card-body" style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <div style={{
@@ -144,14 +175,16 @@ function GoldenTimer() {
         </div>
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={{ fontSize: 12.5, color: running ? tc.fg : 'var(--text-muted)', fontWeight: 600 }}>
-            {running ? tc.label : (lastResult ? `마지막 대응 시간: ${lastResult}` : '상황 발생 시 타이머를 시작하세요')}
+            {running ? tc.label : (lastResult ? `마지막 대응 시간: ${lastResult}` : '상황 발생 시 자동으로 시작되거나, 직접 시작할 수 있습니다')}
           </div>
           <div style={{ fontSize: 10.5, color: 'var(--text-light)', marginTop: 3 }}>
-            본교는 119 도착까지 시간이 걸릴 수 있는 위치에 있습니다. 경과 시간을 확인하며 아래 단계별 절차를 진행하세요.
+            {autoInfo
+              ? `🤖 대시보드에서 감지된 긴급 알림(${autoInfo.student} · ${autoInfo.behavior}, ${autoInfo.time} 발생)을 기준으로 자동 시작되었습니다.`
+              : '본교는 119 도착까지 시간이 걸릴 수 있는 위치에 있습니다. AI가 놓친 상황이라면 직접 시작하고, 경과 시간을 확인하며 아래 절차를 진행하세요.'}
           </div>
         </div>
         {!running ? (
-          <button className="ft-btn ft-btn-danger" onClick={start}>🚨 상황 발생 — 타이머 시작</button>
+          <button className="ft-btn ft-btn-danger" onClick={start}>🚨 상황 발생 — 직접 시작</button>
         ) : (
           <button className="ft-btn ft-btn-outline" onClick={stop}>⏹ 종료 / 기록</button>
         )}
