@@ -5,7 +5,7 @@
 //  1) 이 정부 API는 XML만 응답하고 브라우저 직접 호출 시 CORS가 막혀 있음
 //  2) 서비스키를 프런트엔드(클라이언트)에 노출하면 안 되므로 서버에서만 사용
 //
-// 사용법: GET /api/emergency-facilities?stage1=부산광역시&stage2=금정구
+// 사용법: GET /api/emergency-facilities?stage1=부산광역시
 
 const SERVICE_URL = 'https://apis.data.go.kr/B552657/ErmctInfoInqireService/getEgytListInfoInqire'
 
@@ -80,6 +80,20 @@ export default async function handler(req, res) {
     const upstream = await fetch(`${SERVICE_URL}?${qs.toString()}`)
     const xml = await upstream.text()
 
+    // data.go.kr은 인증 단계에서 실패하면 정상 응답 구조(resultCode/totalCount)가 아니라
+    // <OpenAPI_ServiceResponse><cmmMsgHeader>...</cmmMsgHeader></OpenAPI_ServiceResponse> 형태의
+    // 완전히 다른 에러 포맷을 돌려준다 (키 미승인/오타/트래픽초과 등). 이걸 먼저 체크한다.
+    const returnAuthMsg = getTag(xml, 'returnAuthMsg')
+    const errMsg = getTag(xml, 'errMsg')
+    if (returnAuthMsg || errMsg) {
+      res.status(502).json({
+        error: `공공데이터포털 인증 오류: ${returnAuthMsg || errMsg}`,
+        returnReasonCode: getTag(xml, 'returnReasonCode'),
+        raw: xml.slice(0, 800),
+      })
+      return
+    }
+
     const resultCode = getTag(xml, 'resultCode')
     if (resultCode && resultCode !== '00') {
       const resultMsg = getTag(xml, 'resultMsg') || getTag(xml, 'resultMag') || '알 수 없는 오류'
@@ -109,7 +123,12 @@ export default async function handler(req, res) {
       source: '공공데이터포털 국립중앙의료원 응급의료기관 정보',
       stage1,
       stage2,
-      debug: { totalCount, rawItemCount: items.length, filteredCount: facilities.length },
+      debug: {
+        totalCount,
+        rawItemCount: items.length,
+        filteredCount: facilities.length,
+        rawXmlSample: items.length === 0 ? xml.slice(0, 800) : undefined,
+      },
     })
   } catch (e) {
     res.status(500).json({ error: `요청 실패: ${e.message}` })
