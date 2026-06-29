@@ -52,7 +52,8 @@ function pick(obj, ...keys) {
 }
 
 export default async function handler(req, res) {
-  const serviceKey = process.env.EMERGENCY_API_KEY
+  // Vercel 환경변수 입력 시 앞뒤 공백/줄바꿈이 섞여 들어가는 경우가 있어 방어적으로 trim
+  const serviceKey = (process.env.EMERGENCY_API_KEY || '').trim()
 
   if (!serviceKey) {
     res.status(500).json({
@@ -79,6 +80,18 @@ export default async function handler(req, res) {
   try {
     const upstream = await fetch(`${SERVICE_URL}?${qs.toString()}`)
     const xml = await upstream.text()
+
+    // 게이트웨이 단계에서 막히면(예: "Unauthorized") XML이 아니라 평문이 오기도 한다.
+    // HTTP 상태코드까지 같이 보면 원인 파악이 훨씬 쉬워진다.
+    if (!upstream.ok) {
+      res.status(502).json({
+        error: `공공데이터포털 게이트웨이 오류 (HTTP ${upstream.status})`,
+        upstreamStatus: upstream.status,
+        contentType: upstream.headers.get('content-type'),
+        raw: xml.slice(0, 800),
+      })
+      return
+    }
 
     // data.go.kr은 인증 단계에서 실패하면 정상 응답 구조(resultCode/totalCount)가 아니라
     // <OpenAPI_ServiceResponse><cmmMsgHeader>...</cmmMsgHeader></OpenAPI_ServiceResponse> 형태의
