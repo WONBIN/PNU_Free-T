@@ -15,6 +15,15 @@ const AED_EXAMPLES = [
 
 const MAX_HOSPITAL_MARKERS = 6
 
+// 보건복지부 지정 발달장애인 거점병원·행동발달증진센터 (부산권, 2021년 지정 — 온종합병원)
+// 자해·공격성 등 행동문제는 일반 응급실보다 이곳에서의 전문 대응이 더 적합할 수 있어,
+// 공공데이터포털 응급의료기관 목록에 포함되어 있으면 별도 표시한다.
+// (data.go.kr hpid 기준으로 매칭 — 행정상 병원명은 "온병원"으로도 표기됨)
+const DEV_DISABILITY_HUB_ID = 'A1200020'
+function isDevDisabilityHub(f) {
+  return f.id === DEV_DISABILITY_HUB_ID || (f.name && (f.name.includes('온종합') || f.name.includes('온그룹의료재단')))
+}
+
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371
   const dLat = ((lat2 - lat1) * Math.PI) / 180
@@ -148,6 +157,7 @@ function Map() {
   }
 
   const nearest = hospitals[0]
+  const devHub = hospitals.find(isDevDisabilityHub)
 
   return (
     <div>
@@ -175,6 +185,28 @@ function Map() {
           <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
             학교에서 가장 가까운 응급실은 <strong style={{ color: 'var(--text-primary)' }}>{nearest.name}</strong>이며, 약{' '}
             <strong style={{ color: 'var(--green-700, #047857)' }}>{nearest.distanceKm.toFixed(1)}km</strong> 거리에 있습니다.
+          </div>
+        </div>
+      )}
+
+      {devHub && (
+        <div
+          className="ft-card"
+          style={{
+            padding: '14px 18px',
+            marginBottom: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            background: 'var(--orange-50, #fffbeb)',
+            borderColor: 'var(--orange-200, #fde68a)',
+          }}
+        >
+          <span style={{ fontSize: 20 }}>🧩</span>
+          <div style={{ fontSize: 13.5, color: 'var(--text-secondary)' }}>
+            보건복지부 지정 <strong style={{ color: 'var(--text-primary)' }}>발달장애인 거점병원·행동발달증진센터</strong>인{' '}
+            <strong style={{ color: 'var(--orange-600, #d97706)' }}>{devHub.name}</strong>도 목록에 포함되어 있습니다. 자해·공격성 등
+            행동문제 발생 시 일반 응급실보다 이곳에서의 전문 대응이 더 적합할 수 있습니다.
           </div>
         </div>
       )}
@@ -219,6 +251,11 @@ function Map() {
                   {idx === 0 && (
                     <span className="ft-badge" style={{ background: 'var(--blue-100, #dbeafe)', color: 'var(--blue-700)' }}>
                       가장 가까운 응급실
+                    </span>
+                  )}
+                  {isDevDisabilityHub(f) && (
+                    <span className="ft-badge" style={{ background: 'var(--orange-100, #fef3c7)', color: 'var(--orange-600, #d97706)' }}>
+                      🧩 발달장애인 거점병원
                     </span>
                   )}
                   <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text-primary)' }}>{f.name}</span>
