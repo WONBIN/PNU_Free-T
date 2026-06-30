@@ -65,7 +65,7 @@ function Notifications() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 20 }}>
+      <div className="ft-grid-main" style={{ gap: 20 }}>
         <div className="ft-card">
           <div className="ft-card-header">
             <div className="ft-card-title"><span>🔔</span>알림 종류</div>
