@@ -109,8 +109,14 @@ function Map() {
         const withDistance = data.facilities
           .map((f) => ({ ...f, distanceKm: haversineKm(SCHOOL_LOCATION.lat, SCHOOL_LOCATION.lng, f.lat, f.lng) }))
           .sort((a, b) => a.distanceKm - b.distanceKm)
-          .slice(0, MAX_HOSPITAL_MARKERS)
-        setHospitals(withDistance)
+
+        const nearest = withDistance.slice(0, MAX_HOSPITAL_MARKERS)
+        // 발달장애인 거점병원은 거리상 "가장 가까운 N개"에 안 들 수 있다 — 그래도 안내 카드/배지가
+        // "목록에 포함되어 있습니다"라고 말하는 만큼, 실제로 목록에 빠짐없이 끼워준다.
+        const devHub = withDistance.find(isDevDisabilityHub)
+        const finalList = devHub && !nearest.some((f) => f.id === devHub.id) ? [...nearest, devHub] : nearest
+
+        setHospitals(finalList)
         setStatus('live')
       })
       .catch((e) => {
